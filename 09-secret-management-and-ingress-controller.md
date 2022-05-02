@@ -7,8 +7,8 @@ Previously you have configured [workload prerequisites](./08-workload-prerequisi
 1. Get the AKS Ingress Controller Managed Identity details.
 
    ```bash
-   TRAEFIK_USER_ASSIGNED_IDENTITY_RESOURCE_ID=$(az deployment group show --resource-group rg-bu0001a0008 -n cluster-stamp --query properties.outputs.aksIngressControllerPodManagedIdentityResourceId.value -o tsv)
-   TRAEFIK_USER_ASSIGNED_IDENTITY_CLIENT_ID=$(az deployment group show --resource-group rg-bu0001a0008 -n cluster-stamp --query properties.outputs.aksIngressControllerPodManagedIdentityClientId.value -o tsv)
+   TRAEFIK_USER_ASSIGNED_IDENTITY_RESOURCE_ID=$(az deployment group show --resource-group $AKS_AKS_BASELINE -n cluster-stamp --query properties.outputs.aksIngressControllerPodManagedIdentityResourceId.value -o tsv)
+   TRAEFIK_USER_ASSIGNED_IDENTITY_CLIENT_ID=$(az deployment group show --resource-group $AKS_AKS_BASELINE -n cluster-stamp --query properties.outputs.aksIngressControllerPodManagedIdentityClientId.value -o tsv)
    ```
 
 1. Ensure your bootstrapping process has created the following namespace.
@@ -53,7 +53,7 @@ Previously you have configured [workload prerequisites](./08-workload-prerequisi
 
    ```bash
    cat <<EOF | kubectl create -f -
-   apiVersion: secrets-store.csi.x-k8s.io/v1alpha1
+   apiVersion: secrets-store.csi.x-k8s.io/v1
    kind: SecretProviderClass
    metadata:
      name: aks-ingress-tls-secret-csi-akv
@@ -73,7 +73,7 @@ Previously you have configured [workload prerequisites](./08-workload-prerequisi
              objectName: traefik-ingress-internal-aks-ingress-tls
              objectAlias: tls.key
              objectType: secret
-       tenantId: $TENANTID_AZURERBAC_AKS_BASELINE
+       tenantId: $TENANTID_AKS_BASELINE
    EOF
    ```
 
@@ -111,6 +111,16 @@ Previously you have configured [workload prerequisites](./08-workload-prerequisi
 This reference implementation uses the Azure AD Pod Identities feature to allow Azure Managed Identities to be associated with the cluster and then associated with pods via the `AzureIdentity` CRD. This feature is in preview and will eventually be replaced with [Azure AD Workload Identities](https://azure.github.io/azure-workload-identity) which approaches the relationship between workloads and their Azure AD identities differently. This Workload Identity feature is also still in preview and will be having additional capabilities built out, such as supporting Azure Managed Identities, to reach a similar feature state as Azure AD Pod Identities. Components like Azure Key Vault Provider for Secrets Store CSI driver will be supporting Workload Identities as an alternative to the original Azure AD Pod Identities feature over time.
 
 This reference implementation does enable the required OIDC Issuer Profile so that you can [begin to use](https://azure.github.io/azure-workload-identity/docs/quick-start.html) the workload identity feature for your applications that can be written to support the new model. Expect updates to this reference implementation as the features and the integration of Azure AD Workload Identities evolve.
+
+### Save your work in-progress
+
+```bash
+# run the saveenv.sh script at any time to save environment variables created above to aks_baseline.env
+./saveenv.sh
+
+# if your terminal session gets reset, you can source the file to reload the environment variables
+# source aks_baseline.env
+```
 
 ### Next step
 

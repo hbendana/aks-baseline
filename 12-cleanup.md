@@ -11,9 +11,9 @@ After you are done exploring your deployed [AKS Baseline cluster](./), you'll wa
    :warning: Ensure you are using the correct subscription, and validate that the only resources that exist in these groups are ones you're okay deleting.
 
    ```bash
-   az group delete -n rg-bu0001a0008
-   az group delete -n rg-enterprise-networking-spokes
-   az group delete -n rg-enterprise-networking-hubs
+   az group delete -n $AKS_AKS_BASELINE
+   az group delete -n $SPOKES_AKS_BASELINE
+   az group delete -n $HUBS_AKS_BASELINE
    ```
 
 1. Purge Azure Key Vault

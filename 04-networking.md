@@ -27,12 +27,21 @@ The following two resource groups will be created and populated with networking 
 
 ## Steps
 
-1. Login into the Azure subscription that you'll be deploying into.
+1. Login into the Azure subscription that you'll be deploying into. To make sure your resource group names will not conflict withothers within the same subscription, you will be assigned a number during the workshop. Please replace `rgNumber` with your assigned number
 
    > :book: The networking team logins into the Azure subscription that will contain the regional hub. At Contoso Bicycle, all of their regional hubs are in the same, centrally-managed subscription.
 
    ```bash
-   az login -t $TENANTID_AZURERBAC_AKS_BASELINE
+   rgNumber=<Your Assigned rgNumber>
+
+   export HUBS_AKS_BASELINE="rg-enterprise-networking-hubs-"$rgNumber
+   az login -t $TENANTID_AKS_BASELINE
+   echo HUBS_AKS_BASELINE: $HUBS_AKS_BASELINE
+
+   export SPOKES_AKS_BASELINE="rg-enterprise-networking-spokes-"$rgNumber
+   echo SPOKES_AKS_BASELINE: $SPOKES_AKS_BASELINE
+
+   az login -t $TENANTID_AKS_BASELINE
    ```
 
 1. Create the networking hubs resource group.
@@ -41,7 +50,7 @@ The following two resource groups will be created and populated with networking 
 
    ```bash
    # [This takes less than one minute to run.]
-   az group create -n rg-enterprise-networking-hubs -l centralus
+   az group create -n $HUBS_AKS_BASELINE -l centralus
    ```
 
 1. Create the networking spokes resource group.
@@ -50,7 +59,7 @@ The following two resource groups will be created and populated with networking 
 
    ```bash
    # [This takes less than one minute to run.]
-   az group create -n rg-enterprise-networking-spokes -l centralus
+   az group create -n $SPOKES_AKS_BASELINE -l centralus
    ```
 
 1. Create the regional network hub.
@@ -63,7 +72,7 @@ The following two resource groups will be created and populated with networking 
 
    ```bash
    # [This takes about six minutes to run.]
-   az deployment group create -g rg-enterprise-networking-hubs -f networking/hub-default.bicep -p location=eastus2
+   az deployment group create -g $HUBS_AKS_BASELINE -f networking/hub-default.bicep -p location=eastus2
    ```
 
    The hub creation will emit the following:
@@ -75,10 +84,10 @@ The following two resource groups will be created and populated with networking 
    > :book: The networking team receives a request from an app team in business unit (BU) 0001 for a network spoke to house their new AKS-based application (Internally know as Application ID: A0008). The network team talks with the app team to understand their requirements and aligns those needs with Microsoft's best practices for a general-purpose AKS cluster deployment. They capture those specific requirements and deploy the spoke, aligning to those specs, and connecting it to the matching regional hub.
 
    ```bash
-   RESOURCEID_VNET_HUB=$(az deployment group show -g rg-enterprise-networking-hubs -n hub-default --query properties.outputs.hubVnetId.value -o tsv)
+   RESOURCEID_VNET_HUB=$(az deployment group show -g $HUBS_AKS_BASELINE -n hub-default --query properties.outputs.hubVnetId.value -o tsv)
 
    # [This takes about four minutes to run.]
-   az deployment group create -g rg-enterprise-networking-spokes -f networking/spoke-BU0001A0008.bicep -p location=eastus2 hubVnetResourceId="${RESOURCEID_VNET_HUB}"
+   az deployment group create -g $SPOKES_AKS_BASELINE -f networking/spoke-BU0001A0008.bicep -p location=eastus2 hubVnetResourceId="${RESOURCEID_VNET_HUB}"
    ```
 
    The spoke creation will emit the following:
@@ -92,15 +101,25 @@ The following two resource groups will be created and populated with networking 
    > :book: Now that their regional hub has its first spoke, the hub can no longer run off of the generic hub template. The networking team creates a named hub template (e.g. `hub-eastus2.bicep`) to forever represent this specific hub and the features this specific hub needs in order to support its spokes' requirements. As new spokes are attached and new requirements arise for the regional hub, they will be added to this template file.
 
    ```bash
-   RESOURCEID_SUBNET_NODEPOOLS=$(az deployment group show -g rg-enterprise-networking-spokes -n spoke-BU0001A0008 --query properties.outputs.nodepoolSubnetResourceIds.value -o json)
+   RESOURCEID_SUBNET_NODEPOOLS=$(az deployment group show -g $SPOKES_AKS_BASELINE -n spoke-BU0001A0008 --query properties.outputs.nodepoolSubnetResourceIds.value -o json)
 
    # [This takes about ten minutes to run.]
-   az deployment group create -g rg-enterprise-networking-hubs -f networking/hub-regionA.bicep -p location=eastus2 nodepoolSubnetResourceIds="${RESOURCEID_SUBNET_NODEPOOLS}"
+   az deployment group create -g $HUBS_AKS_BASELINE -f networking/hub-regionA.bicep -p location=eastus2 nodepoolSubnetResourceIds="${RESOURCEID_SUBNET_NODEPOOLS}"
    ```
 
    > :book: At this point the networking team has delivered a spoke in which BU 0001's app team can lay down their AKS cluster (ID: A0008). The networking team provides the necessary information to the app team for them to reference in their infrastructure-as-code artifacts.
    >
    > Hubs and spokes are controlled by the networking team's GitHub Actions workflows. This automation is not included in this reference implementation as this body of work is focused on the AKS baseline and not the networking team's CI/CD practices.
+
+### Save your work in-progress
+
+```bash
+# run the saveenv.sh script at any time to save environment variables created above to aks_baseline.env
+./saveenv.sh
+
+# if your terminal session gets reset, you can source the file to reload the environment variables
+# source aks_baseline.env
+```
 
 ### Next step
 

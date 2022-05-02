@@ -10,17 +10,11 @@ GitOps allows a team to author Kubernetes manifest files, persist them in their 
 * AAD Pod Identity
 * the workload's namespace named `a0008`
 
-1. Install `kubectl` 1.23 or newer. (`kubctl` supports +/-1 Kubernetes version.)
-
-   ```bash
-   sudo az aks install-cli
-   kubectl version --client
-   ```
-
 1. Get the cluster name.
 
    ```bash
-   AKS_CLUSTER_NAME=$(az aks list -g rg-bu0001a0008 --query '[0].name' -o tsv)
+   AKS_CLUSTER_NAME=$(az aks list -g $AKS_AKS_BASELINE --query '[0].name' -o tsv)
+   echo AKS_CLUSTER_NAME: $AKS_CLUSTER_NAME
    ```
 
 1. Get AKS `kubectl` credentials.
@@ -30,7 +24,7 @@ GitOps allows a team to author Kubernetes manifest files, persist them in their 
    > In a following step, you'll log in with a user that has been added to the Azure AD security group used to back the Kubernetes RBAC admin role. Executing the first `kubectl` command below will invoke the AAD login process to authorize the _user of your choice_, which will then be authenticated against Kubernetes RBAC to perform the action. The user you choose to log in with _must be a member of the AAD group bound_ to the `cluster-admin` ClusterRole. For simplicity you could either use the "break-glass" admin user created in [Azure Active Directory Integration](03-aad.md) (`bu0001a0008-admin`) or any user you assigned to the `cluster-admin` group assignment in your [`cluster-rbac.yaml`](cluster-manifests/cluster-rbac.yaml) file.
 
    ```bash
-   az aks get-credentials -g rg-bu0001a0008 -n $AKS_CLUSTER_NAME
+   az aks get-credentials -g $AKS_AKS_BASELINE -n $AKS_CLUSTER_NAME
    ```
 
    :warning: At this point two important steps are happening:
@@ -70,6 +64,16 @@ Furthermore, Flux doesn't need to be installed as an extension and instead the G
 ## Recommendations
 
 It is recommended to have a clearly defined bootstrapping process that occurs as close as practiable to the actual cluster deployment for immediate enrollment of your cluster into your internal processes and tooling. GitOps lends itself well to this desired outcome, and you're encouraged to explore its usage for your cluster bootstrapping process and optionally also workload-level concerns. GitOps is often positioned best for fleet (many clusters) management for uniformity and its simplicity at scale; a more manual (via deployment pipelines) bootstrapping is common on small instance-count AKS deployments. Either process can work with either cluster topologies. Use a bootstrapping process that aligns with your desired objectives and constraints found within your organization and team.
+
+### Save your work in-progress
+
+```bash
+# run the saveenv.sh script at any time to save environment variables created above to aks_baseline.env
+./saveenv.sh
+
+# if your terminal session gets reset, you can source the file to reload the environment variables
+# source aks_baseline.env
+```
 
 ### Next step
 

@@ -13,7 +13,7 @@ The AKS Cluster has been [bootstrapped](./07-bootstrap-validation.md), wrapping 
    > :book: Finally the app team decides to use a wildcard certificate of `*.aks-ingress.contoso.com` for the ingress controller. They use Azure Key Vault to import and manage the lifecycle of this certificate.
 
    ```bash
-   export KEYVAULT_NAME_AKS_BASELINE=$(az deployment group show --resource-group rg-bu0001a0008 -n cluster-stamp --query properties.outputs.keyVaultName.value -o tsv)
+   export KEYVAULT_NAME_AKS_BASELINE=$(az deployment group show --resource-group $AKS_AKS_BASELINE -n cluster-stamp --query properties.outputs.keyVaultName.value -o tsv)
    TEMP_ROLEASSIGNMENT_TO_UPLOAD_CERT=$(az role assignment create --role a4417e6f-fecd-4de8-b567-7b0420556985 --assignee-principal-type user --assignee-object-id $(az ad signed-in-user show --query 'objectId' -o tsv) --scope $(az keyvault show --name $KEYVAULT_NAME_AKS_BASELINE --query 'id' -o tsv) --query 'id' -o tsv)
 
    # If you are behind a proxy or some other egress that does not provide a consistent IP, you'll need to manually adjust the

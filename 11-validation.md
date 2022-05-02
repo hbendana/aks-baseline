@@ -14,7 +14,7 @@ This section will help you to validate the workload is exposed correctly and res
 
    ```bash
    # query the Azure Application Gateway Public Ip
-   APPGW_PUBLIC_IP=$(az deployment group show --resource-group rg-enterprise-networking-spokes -n spoke-BU0001A0008 --query properties.outputs.appGwPublicIpAddress.value -o tsv)
+   APPGW_PUBLIC_IP=$(az deployment group show --resource-group $SPOKES_AKS_BASELINE -n spoke-BU0001A0008 --query properties.outputs.appGwPublicIpAddress.value -o tsv)
    ```
 
 1. Create `A` Record for DNS
@@ -134,23 +134,6 @@ A series of metric alerts were configured as well in this reference implementati
 1. In the Azure Portal, navigate to your AKS cluster resource group (`rg-bu0001a0008`).
 1. Select your cluster, then _Insights_.
 1. Select _Recommended alerts_ to see those enabled. (Feel free to enable/disable as you see fit.)
-
-## Validate Azure Container Registry Image Pulls
-
-If you configured your third-party images to be pulled from your Azure Container Registry vs public registries, you can validate that the container registry logs show `Pull` logs for your cluster when you applied your flux configuration.
-
-### Steps
-
-1. In the Azure Portal, navigate to your AKS cluster resource group (`rg-bu0001a0008`) and then your Azure Container Registry instances (starts with `acraks`).
-1. Select _Logs_.
-1. Execute the following query, for whatever time range is appropriate.
-
-   ```kusto
-   ContainerRegistryRepositoryEvents
-   | where OperationName == 'Pull'
-   ```
-
-1. You should see logs for CSI, kured, memcached, and traefik. You'll see multiple for some as the image was pulled to multiple nodes to satisfy ReplicaSet/DaemonSet placement.
 
 ## Next step
 

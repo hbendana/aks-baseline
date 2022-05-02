@@ -25,8 +25,11 @@ We'll be bootstrapping this cluster with the Flux GitOps agent as installed as a
    > They create this resource group to be the parent group for the application.
 
    ```bash
+   export AKS_AKS_BASELINE="rg-bu0001a0008-"$rgNumber
+   echo AKS_AKS_BASELINE: $AKS_AKS_BASELINE
+
    # [This takes less than one minute.]
-   az group create --name rg-bu0001a0008 --location eastus2
+   az group create --name $AKS_AKS_BASELINE --location eastus2
    ```
 
 1. Get the AKS cluster spoke virtual network resource ID.
@@ -34,14 +37,14 @@ We'll be bootstrapping this cluster with the Flux GitOps agent as installed as a
    > :book: The app team will be deploying to a spoke virtual network, that was already provisioned by the network team.
 
    ```bash
-   export RESOURCEID_VNET_CLUSTERSPOKE_AKS_BASELINE=$(az deployment group show -g rg-enterprise-networking-spokes -n spoke-BU0001A0008 --query properties.outputs.clusterVnetResourceId.value -o tsv)
+   export RESOURCEID_VNET_CLUSTERSPOKE_AKS_BASELINE=$(az deployment group show -g $SPOKES_AKS_BASELINE -n spoke-BU0001A0008 --query properties.outputs.clusterVnetResourceId.value -o tsv)
    ```
 
 1. Deploy the container registry template.
 
    ```bash
    # [This takes about four minutes.]
-   az deployment group create -g rg-bu0001a0008 -f acr-stamp.bicep -p targetVnetResourceId=${RESOURCEID_VNET_CLUSTERSPOKE_AKS_BASELINE}
+   az deployment group create -g $AKS_AKS_BASELINE -f acr-stamp.bicep -p targetVnetResourceId=${RESOURCEID_VNET_CLUSTERSPOKE_AKS_BASELINE}
    ```
 
 1. Import cluster management images to your container registry.
@@ -50,28 +53,13 @@ We'll be bootstrapping this cluster with the Flux GitOps agent as installed as a
 
    ```bash
    # Get your ACR instance name
-   export ACR_NAME_AKS_BASELINE=$(az deployment group show -g rg-bu0001a0008 -n acr-stamp --query properties.outputs.containerRegistryName.value -o tsv)
+   export ACR_NAME_AKS_BASELINE=$(az deployment group show -g $AKS_AKS_BASELINE -n acr-stamp --query properties.outputs.containerRegistryName.value -o tsv)
 
    # Import core image(s) hosted in public container registries to be used during bootstrapping
    az acr import --source docker.io/weaveworks/kured:1.9.0 -n $ACR_NAME_AKS_BASELINE
    ```
 
    > In this walkthrough, there is only one image that is included in the bootstrapping process. It's included as an reference for this process. Your choice to use Kubernetes Reboot Daemon (Kured) or any other images, including helm charts, as part of your bootstrapping is yours to make.
-
-1. Update bootstrapping manifests to pull from your ACR instance. _Optional. Fork required._
-
-   > Your cluster will immedately begin processing the manifests in [`cluster-manifests/`](./cluster-manifests/) due to the bootstrapping configuration that will be applied to it. So, before you deploy the cluster now would be the right time push the following changes to your fork so that it will use your files instead of the files found in the original mspnp repo which point to public container registries:
-   >
-   > * update the one `image:` value in [`kured.yaml`](./cluster-manifests/cluster-baseline-settings/kured.yaml) to use your container registry instead of a public container registry. See the comment in the file for instructions (or you can simply run the command below.)
-
-   :warning: Without updating these files and using your own fork, you will be deploying your cluster such that it takes dependencies on public container registries. This is generally okay for exploratory/testing, but not suitable for production. Before going to production, ensure _all_ image references you bring to your cluster are from _your_ container registry (link imported in the prior step) or another that you feel confident relying on.
-
-   ```bash
-   sed -i "s:docker.io:${ACR_NAME_AKS_BASELINE}.azurecr.io:" ./cluster-manifests/cluster-baseline-settings/kured.yaml
-
-   git commit -a -m "Update image source to use my ACR instance instead of a public container registry."
-   git push
-   ```
 
 ### Save your work in-progress
 

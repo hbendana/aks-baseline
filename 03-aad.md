@@ -21,49 +21,59 @@ Following the steps below you will result in an Azure AD configuration that will
 1. Query and save your Azure subscription's tenant id.
 
    ```bash
-   export TENANTID_AZURERBAC_AKS_BASELINE=$(az account show --query tenantId -o tsv)
+   export TENANTID_AKS_BASELINE=$(az account show --query tenantId -o tsv)
    ```
 
-1. Playing the role as the Contoso Bicycle Azure AD team, login into the tenant where Kubernetes Cluster API authorization will be associated with.
+1. Create/identify the Azure AD security group and "break-glass" cluster administrator user that is going to map to the [Kubernetes Cluster Admin](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#user-facing-roles) role `cluster-admin`. 
 
-   ```bash
-   az login -t <Replace-With-ClusterApi-AzureAD-TenantId> --allow-no-subscriptions
-   export TENANTID_K8SRBAC_AKS_BASELINE=$(az account show --query tenantId -o tsv)
-   ```
+   **Option 1 - Create a new security group, user, and associate the two**
 
-1. Create/identify the Azure AD security group that is going to map to the [Kubernetes Cluster Admin](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#user-facing-roles) role `cluster-admin`.
+   1. Create the cluster administrator security group.
 
-   If you already have a security group that is appropriate for your cluster's admin service accounts, use that group and skip this step. If using your own group or your Azure AD administrator created one for you to use; you will need to update the group name and ID throughout the reference implementation.
+      ```bash
+      export AADOBJECTID_GROUP_CLUSTERADMIN_AKS_BASELINE=$(az ad group create --display-name 'cluster-admins-bu0001a000800' --mail-nickname 'cluster-admins-bu0001a000800' --description "Principals in this group are cluster admins in the bu0001a000800 cluster." --query objectId -o tsv)
+      ```
 
-   ```bash
-   export AADOBJECTID_GROUP_CLUSTERADMIN_AKS_BASELINE=$(az ad group create --display-name 'cluster-admins-bu0001a000800' --mail-nickname 'cluster-admins-bu0001a000800' --description "Principals in this group are cluster admins in the bu0001a000800 cluster." --query objectId -o tsv)
-   ```
+   1. Create the "break-glass" cluster administrator user.
 
-   This Azure AD group object ID will be used later while creating the cluster. This way, once the cluster gets deployed the new group will get the proper Cluster Role bindings in Kubernetes.
+      > :book: The organization knows the value of having a break-glass admin user for their critical infrastructure. The app team requests a cluster admin user and Azure AD Admin team proceeds with the creation of the user in Azure AD.
 
-1. Create a "break-glass" cluster administrator user for your AKS cluster.
+      ```bash
+      TENANTDOMAIN_K8SRBAC=$(az ad signed-in-user show --query 'userPrincipalName' -o tsv | cut -d '@' -f 2 | sed 's/\"//')
+      AADOBJECTNAME_USER_CLUSTERADMIN=bu0001a000800-admin
+      AADOBJECTID_USER_CLUSTERADMIN=$(az ad user create --display-name=${AADOBJECTNAME_USER_CLUSTERADMIN} --user-principal-name ${AADOBJECTNAME_USER_CLUSTERADMIN}@${TENANTDOMAIN_K8SRBAC} --force-change-password-next-login --password ChangeMebu0001a0008AdminChangeMe --query objectId -o tsv)
+      ```
 
-   > :book: The organization knows the value of having a break-glass admin user for their critical infrastructure. The app team requests a cluster admin user and Azure AD Admin team proceeds with the creation of the user in Azure AD.
+   1. Add the cluster administrator user to the cluster administrator security group.
 
-   ```bash
-   TENANTDOMAIN_K8SRBAC=$(az ad signed-in-user show --query 'userPrincipalName' -o tsv | cut -d '@' -f 2 | sed 's/\"//')
-   AADOBJECTNAME_USER_CLUSTERADMIN=bu0001a000800-admin
-   AADOBJECTID_USER_CLUSTERADMIN=$(az ad user create --display-name=${AADOBJECTNAME_USER_CLUSTERADMIN} --user-principal-name ${AADOBJECTNAME_USER_CLUSTERADMIN}@${TENANTDOMAIN_K8SRBAC} --force-change-password-next-login --password ChangeMebu0001a0008AdminChangeMe --query objectId -o tsv)
-   ```
+      > :book: The recently created break-glass admin user is added to the Kubernetes Cluster Admin group from Azure AD. After this step the Azure AD Admin team will have finished the app team's request.
 
-1. Add the cluster admin user(s) to the cluster admin security group.
+      ```bash
+      az ad group member add -g $AADOBJECTID_GROUP_CLUSTERADMIN_AKS_BASELINE --member-id $AADOBJECTID_USER_CLUSTERADMIN
+      ```
 
-   > :book: The recently created break-glass admin user is added to the Kubernetes Cluster Admin group from Azure AD. After this step the Azure AD Admin team will have finished the app team's request.
+   1. Creat the Azure AD security group that is going to be a namespace reader.
 
-   ```bash
-   az ad group member add -g $AADOBJECTID_GROUP_CLUSTERADMIN_AKS_BASELINE --member-id $AADOBJECTID_USER_CLUSTERADMIN
-   ```
+      ```bash
+      export AADOBJECTID_GROUP_A0008_READER_AKS_BASELINE=$(az ad group create --display-name 'cluster-ns-a0008-readers-bu0001a000800' --mail-nickname 'cluster-ns-a0008-readers-bu0001a000800' --description "Principals in this group are readers of namespace a0008 in the bu0001a000800 cluster." --query objectId -o tsv)
+      echo AADOBJECTID_GROUP_A0008_READER_AKS_BASELINE: $AADOBJECTID_GROUP_A0008_READER_AKS_BASELINE
+      ```
+   
+   **Option 2 - Use an existing security group and user**
 
-1. Create/identify the Azure AD security group that is going to be a namespace reader.
+   1. If you already have a security group and cluster administrator user that is appropriate for your cluster's admin service accounts, use those. We will save the security group object ID to use later when we deploy our cluster.
 
-   ```bash
-   export AADOBJECTID_GROUP_A0008_READER_AKS_BASELINE=$(az ad group create --display-name 'cluster-ns-a0008-readers-bu0001a000800' --mail-nickname 'cluster-ns-a0008-readers-bu0001a000800' --description "Principals in this group are readers of namespace a0008 in the bu0001a000800 cluster." --query objectId -o tsv)
-   ```
+      ```bash
+      export AADOBJECTID_GROUP_CLUSTERADMIN_AKS_BASELINE=$(az ad group show --group 'cluster-admins-bu0001a000800' --query objectId -o tsv)
+      echo AADOBJECTID_GROUP_CLUSTERADMIN_AKS_BASELINE: $AADOBJECTID_GROUP_CLUSTERADMIN_AKS_BASELINE
+      ```
+
+   1. Identify the Azure AD security group that is going to be a namespace reader.
+
+      ```bash
+      export AADOBJECTID_GROUP_A0008_READER_AKS_BASELINE=$(az ad group show --group 'cluster-ns-a0008-readers-bu0001a000800' --query objectId -o tsv)
+      echo AADOBJECTID_GROUP_A0008_READER_AKS_BASELINE: $AADOBJECTID_GROUP_A0008_READER_AKS_BASELINE
+      ```
 
 ## Kubernetes RBAC backing store
 
