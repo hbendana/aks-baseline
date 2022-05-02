@@ -54,7 +54,7 @@ This is the starting point for the instructions on deploying the [AKS Baseline r
 
    ```bash
    git clone https://github.com/hbendana/aks-secure-baseline.git
-   cd aks-secure-baseline
+   cd aks-baseline
    ```
 
    > :bulb: The steps shown here and elsewhere in the reference implementation use Bash shell commands. On Windows, you can use the [Windows Subsystem for Linux](https://docs.microsoft.com/windows/wsl/about) to run Bash.

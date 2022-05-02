@@ -35,7 +35,6 @@ The following two resource groups will be created and populated with networking 
    rgNumber=<Your Assigned rgNumber>
 
    export HUBS_AKS_BASELINE="rg-enterprise-networking-hubs-"$rgNumber
-   az login -t $TENANTID_AKS_BASELINE
    echo HUBS_AKS_BASELINE: $HUBS_AKS_BASELINE
 
    export SPOKES_AKS_BASELINE="rg-enterprise-networking-spokes-"$rgNumber
